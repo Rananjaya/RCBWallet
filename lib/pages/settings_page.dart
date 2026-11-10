@@ -4,11 +4,12 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/services.dart';
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:local_auth/local_auth.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
+import 'package:wallet/models/app_lock_provider.dart';
 import 'package:wallet/models/theme_provider.dart';
 import 'package:wallet/models/startup_settings_provider.dart';
+import 'package:wallet/services/app_lock_service.dart';
 import 'package:wallet/services/backup_service.dart';
 import 'package:wallet/models/provider_helper.dart';
 import 'package:wallet/models/db_helper.dart';
@@ -31,13 +32,87 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Future<bool> _authenticateForDestructiveAction() async {
-    if (Platform.isLinux) return true;
-    final auth = LocalAuthentication();
-    final isDeviceSupported = await auth.isDeviceSupported();
-    if (!isDeviceSupported) return true;
-    return await auth.authenticate(
-      localizedReason: 'Authenticate to perform this action',
-      options: const AuthenticationOptions(stickyAuth: true),
+    if (!AppLockService.isSupportedPlatform) return true;
+    final result = await context.read<AppLockProvider>().authenticateForAction(
+      'Authenticate to perform this action',
+    );
+    if (result == AppAuthResult.success) return true;
+    // Unchanged behaviour: devices without a screen lock can still use these
+    // actions (they were never gated on such devices).
+    if (result == AppAuthResult.noDeviceSecurity) return true;
+    _showAuthMessage(result);
+    return false;
+  }
+
+  /// Turning the app lock on first confirms that device authentication works,
+  /// so the user cannot lock themselves out.
+  Future<void> _setAppLockEnabled(
+    StartupSettingsProvider provider,
+    bool enable,
+  ) async {
+    if (enable && AppLockService.isSupportedPlatform) {
+      final result = await context.read<AppLockProvider>().authenticateForAction(
+        'Authenticate to turn on app lock',
+      );
+      if (result == AppAuthResult.noDeviceSecurity) {
+        if (mounted) _showScreenLockRequiredDialog();
+        return;
+      }
+      if (result != AppAuthResult.success) {
+        _showAuthMessage(result, enablingAppLock: true);
+        return;
+      }
+    }
+    if (provider.showAuthenticationScreen != enable) {
+      await provider.toggleAuthenticationScreen();
+    }
+  }
+
+  /// Settings-specific wording. The lock screen's messages refer to its
+  /// Unlock button, which does not exist on this screen.
+  void _showAuthMessage(AppAuthResult result, {bool enablingAppLock = false}) {
+    if (!mounted) return;
+    final outcome = enablingAppLock
+        ? 'App Lock was not enabled.'
+        : 'The action was not performed.';
+    final String reason;
+    switch (result) {
+      case AppAuthResult.failed:
+        reason = 'Authentication cancelled.';
+        break;
+      case AppAuthResult.lockedOut:
+        reason = 'Too many failed attempts. Wait a moment and try again.';
+        break;
+      case AppAuthResult.noDeviceSecurity:
+        reason = 'No screen lock is set on this device.';
+        break;
+      case AppAuthResult.error:
+      case AppAuthResult.success:
+        reason = 'Authentication is not available right now.';
+        break;
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('$reason $outcome')),
+    );
+  }
+
+  void _showScreenLockRequiredDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Screen lock required'),
+        content: const Text(
+          'App lock uses your device\'s screen lock and biometrics. '
+          'Set up a PIN, pattern or password in Android Settings > Security, '
+          'then turn on App Lock again.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
     );
   }
 
@@ -101,12 +176,12 @@ class _SettingsPageState extends State<SettingsPage> {
               _LiquidGlassTile(
                 icon: Icons.shield_outlined,
                 title: 'Authentication Screen',
-                subtitle: 'Require biometrics when app starts',
+                subtitle:
+                    'Require biometrics or screen lock to open the app and when returning to it',
                 trailing: Switch(
                   value: startupProvider.showAuthenticationScreen,
-                  onChanged: (_) {
-                    startupProvider.toggleAuthenticationScreen();
-                  },
+                  onChanged: (value) =>
+                      _setAppLockEnabled(startupProvider, value),
                 ),
               ),
               Divider(
