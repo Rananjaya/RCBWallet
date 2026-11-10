@@ -51,7 +51,9 @@ val releaseSigningReady = releaseSigningErrors.isEmpty()
 
 android {
     namespace = "com.rananjaya.rcbwallet"
-    compileSdk = flutter.compileSdkVersion
+    // Android 17 (API 37). Set explicitly: Flutter 3.47.9 still defaults to 36.
+    // Requires AGP 9.3+ (see android/settings.gradle.kts).
+    compileSdk = 37
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
@@ -71,7 +73,8 @@ android {
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
-        targetSdk = flutter.targetSdkVersion
+        // Android 17 (API 37). minSdk stays at Flutter's default (24).
+        targetSdk = 37
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }
