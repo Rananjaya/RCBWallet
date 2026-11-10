@@ -71,7 +71,8 @@ Compared with upstream `1.0.42+45`:
   `android/key.properties`; release builds fail if it is missing or invalid
   and never fall back to the debug key. Added `android/key.properties.example`.
 - In-app "Star" and "Report Error" links now point to this fork's repository.
-  The sponsorship link still points to the original author.
+  Removed the in-app "Buy Me a Coffee" banner that linked to the original
+  author's Ko-fi page.
 - Replaced the upstream launcher icon with custom RCBWallet branding (see
   [Branding](#branding)).
 
