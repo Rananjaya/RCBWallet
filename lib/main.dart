@@ -1,7 +1,6 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:local_auth/local_auth.dart';
+import 'package:wallet/models/app_lock_provider.dart';
 import 'package:wallet/models/theme_provider.dart';
 import 'package:wallet/models/startup_settings_provider.dart';
 import 'package:wallet/services/app_initialization_service.dart';
@@ -11,7 +10,7 @@ import 'models/provider_helper.dart';
 import 'screens/homescreen.dart';
 import 'package:provider/provider.dart';
 import 'package:wallet/services/auto_backup_service.dart';
-import 'dart:io' show Platform;
+import 'package:wallet/widgets/app_lock_gate.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -29,6 +28,9 @@ void main() async {
 
   AutoBackupService.initialize(autoBackupProvider);
 
+  // Starts locked when the app lock is enabled in Settings.
+  final appLockProvider = AppLockProvider(startupProvider);
+
   runApp(
     MultiProvider(
       providers: [
@@ -38,6 +40,7 @@ void main() async {
         ChangeNotifierProvider.value(value: themeProvider),
         ChangeNotifierProvider.value(value: startupProvider),
         ChangeNotifierProvider.value(value: autoBackupProvider),
+        ChangeNotifierProvider.value(value: appLockProvider),
       ],
       child: const MyApp(),
     ),
@@ -91,6 +94,8 @@ class _MyAppState extends State<MyApp> {
           darkTheme: themeProvider.darkTheme,
           themeMode: data.themeMode,
           home: const SplashScreen(),
+          builder: (context, child) =>
+              AppLockGate(child: child ?? const SizedBox.shrink()),
         );
       },
     );
@@ -110,6 +115,7 @@ class _SplashScreenState extends State<SplashScreen>
   late Animation<double> _fadeAnimation;
   late Animation<double> _scaleAnimation;
   late Animation<double> _iconSlideAnimation;
+  AppLockProvider? _appLock;
 
   @override
   void initState() {
@@ -157,19 +163,27 @@ class _SplashScreenState extends State<SplashScreen>
 
   @override
   void dispose() {
+    _appLock?.removeListener(_onLockChanged);
     _animationController.dispose();
     super.dispose();
   }
 
-  Future<void> _checkStartupSettings() async {
-    final startupProvider = Provider.of<StartupSettingsProvider>(
-      context,
-      listen: false,
-    );
+  /// Opens the home screen once the app is unlocked. Authentication itself
+  /// is handled by [AppLockGate], which covers this screen while locked.
+  void _checkStartupSettings() {
+    final appLock = context.read<AppLockProvider>();
+    if (!appLock.isLocked) {
+      _navigateToHomeScreen();
+      return;
+    }
+    _appLock = appLock..addListener(_onLockChanged);
+  }
 
-    if (startupProvider.showAuthenticationScreen) {
-      await _performAuthentication();
-    } else {
+  void _onLockChanged() {
+    final appLock = _appLock;
+    if (appLock != null && !appLock.isLocked) {
+      appLock.removeListener(_onLockChanged);
+      _appLock = null;
       _navigateToHomeScreen();
     }
   }
@@ -187,29 +201,6 @@ class _SplashScreenState extends State<SplashScreen>
           transitionDuration: Duration.zero,
         ),
       );
-    }
-  }
-
-  Future<void> _performAuthentication() async {
-    if (Platform.isLinux || kIsWeb) {
-      _navigateToHomeScreen();
-      return;
-    }
-
-    final auth = LocalAuthentication();
-    bool isBiometricSupported = await auth.isDeviceSupported();
-    bool canCheckBiometrics = await auth.canCheckBiometrics;
-
-    if (isBiometricSupported && canCheckBiometrics) {
-      bool authenticated = await auth.authenticate(
-        localizedReason: 'Authenticate to access your wallet',
-        options: const AuthenticationOptions(stickyAuth: true),
-      );
-      if (authenticated) {
-        _navigateToHomeScreen();
-      }
-    } else {
-      _navigateToHomeScreen();
     }
   }
 
