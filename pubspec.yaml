@@ -1,10 +1,14 @@
 name: wallet
-description: "Wallet is a Flutter project designed to store card information
-  locally on the device, ensuring that the data is secure and cannot be stolen,
-  as the application does not have internet access. The app is optimized for
-  efficiency, allowing users to quickly copy card details for transactions."
+description: "RCBWallet - an independently maintained fork of Wallet by
+  Sidhant (https://github.com/sidhant947/Wallet). Stores card information
+  locally on the device in encrypted form, with no internet permission in
+  release builds."
 publish_to: "none"
-version: 1.0.42+45
+# RCBWallet versioning (independent of upstream): MAJOR.MINOR.PATCH+BUILD
+#   MAJOR = breaking changes, MINOR = backward-compatible features,
+#   PATCH = bug fixes, BUILD = Android versionCode (must increase on every
+#   distributed release). Upstream Wallet was at 1.0.42+45 when forked.
+version: 1.0.0+1
 
 environment:
   sdk: ^3.10.4

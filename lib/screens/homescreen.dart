@@ -591,7 +591,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             onPressed: () async {
               HapticFeedback.lightImpact();
-              const url = 'https://github.com/sidhant947/Wallet';
+              const url = 'https://github.com/Rananjaya/RCBWallet';
               await launchUrl(
                 Uri.parse(url),
                 mode: LaunchMode.externalApplication,

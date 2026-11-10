@@ -85,7 +85,7 @@ class _MyAppState extends State<MyApp> {
           listen: false,
         );
         return MaterialApp(
-          title: 'Wallet',
+          title: 'RCBWallet',
           debugShowCheckedModeBanner: false,
           theme: themeProvider.lightTheme,
           darkTheme: themeProvider.darkTheme,
@@ -279,7 +279,7 @@ class _SplashScreenState extends State<SplashScreen>
                     child: Column(
                       children: [
                         Text(
-                          'WALLET',
+                          'RCBWALLET',
                           style: TextStyle(
                             fontSize: 32,
                             fontWeight: FontWeight.bold,
