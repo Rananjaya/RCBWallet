@@ -21,6 +21,13 @@ class Wallet {
   final String? backImagePath;
   final String? pdfPath;
   final String? pdfName;
+  // Annual fee reminders (all optional, stored encrypted like other fields).
+  /// Annual fee amount, digits as entered (no currency attached).
+  final String? annualFee;
+  /// Yearly due date as "MM-DD".
+  final String? annualFeeDueDay;
+  /// Year of the last annual-fee cycle marked as paid (e.g. "2026").
+  final String? annualFeePaidYear;
   int orderIndex;
 
   Wallet({
@@ -43,8 +50,44 @@ class Wallet {
     this.backImagePath,
     this.pdfPath,
     this.pdfName,
+    this.annualFee,
+    this.annualFeeDueDay,
+    this.annualFeePaidYear,
     this.orderIndex = 0,
   });
+
+  /// Copy with updated annual-fee fields; every other field is kept.
+  Wallet copyWithAnnualFee({
+    String? annualFee,
+    String? annualFeeDueDay,
+    String? annualFeePaidYear,
+  }) {
+    return Wallet(
+      id: id,
+      name: name,
+      number: number,
+      expiry: expiry,
+      network: network,
+      issuer: issuer,
+      customFields: customFields,
+      spends: spends,
+      rewards: rewards,
+      annualFeeWaiver: annualFeeWaiver,
+      maxlimit: maxlimit,
+      cardtype: cardtype,
+      billdate: billdate,
+      category: category,
+      color: color,
+      frontImagePath: frontImagePath,
+      backImagePath: backImagePath,
+      pdfPath: pdfPath,
+      pdfName: pdfName,
+      annualFee: annualFee ?? this.annualFee,
+      annualFeeDueDay: annualFeeDueDay ?? this.annualFeeDueDay,
+      annualFeePaidYear: annualFeePaidYear ?? this.annualFeePaidYear,
+      orderIndex: orderIndex,
+    );
+  }
 
   Map<String, dynamic> toMap() {
     return {
@@ -67,6 +110,9 @@ class Wallet {
       'backImagePath': backImagePath,
       'pdfPath': pdfPath,
       'pdfName': pdfName,
+      'annualFee': annualFee,
+      'annualFeeDueDay': annualFeeDueDay,
+      'annualFeePaidYear': annualFeePaidYear,
       'orderIndex': orderIndex,
     };
   }
@@ -95,6 +141,9 @@ class Wallet {
       'backImagePath': backImagePath,
       'pdfPath': pdfPath,
       'pdfName': enc.encryptText(pdfName),
+      'annualFee': enc.encryptText(annualFee),
+      'annualFeeDueDay': enc.encryptText(annualFeeDueDay),
+      'annualFeePaidYear': enc.encryptText(annualFeePaidYear),
       'orderIndex': orderIndex,
     };
   }
@@ -122,6 +171,9 @@ class Wallet {
       backImagePath: map['backImagePath'],
       pdfPath: map['pdfPath'],
       pdfName: map['pdfName'],
+      annualFee: map['annualFee']?.toString(),
+      annualFeeDueDay: map['annualFeeDueDay']?.toString(),
+      annualFeePaidYear: map['annualFeePaidYear']?.toString(),
       orderIndex: map['orderIndex'] ?? 0,
     );
   }
@@ -150,6 +202,9 @@ class Wallet {
       backImagePath: map['backImagePath'],
       pdfPath: map['pdfPath'],
       pdfName: enc.decryptText(map['pdfName']),
+      annualFee: enc.decryptText(map['annualFee']),
+      annualFeeDueDay: enc.decryptText(map['annualFeeDueDay']),
+      annualFeePaidYear: enc.decryptText(map['annualFeePaidYear']),
       orderIndex: map['orderIndex'] ?? 0,
     );
   }

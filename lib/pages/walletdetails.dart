@@ -17,6 +17,7 @@ import 'package:wallet/models/theme_provider.dart';
 import 'package:wallet/models/startup_settings_provider.dart';
 import 'package:wallet/services/card_utils.dart';
 import 'package:wallet/services/currency_formatter.dart';
+import 'package:wallet/services/reminder_planner.dart';
 import 'package:wallet/widgets/full_screen_image_viewer.dart';
 import 'package:wallet/widgets/glass_credit_card.dart';
 import 'package:wallet/widgets/encrypted_image_display.dart';
@@ -132,6 +133,64 @@ class _WalletDetailScreenState extends State<WalletDetailScreen> {
       symbol: symbol,
     );
     return "$remaining more to waive";
+  }
+
+  static const List<String> _monthNames = [
+    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+  ];
+
+  String _formatDate(DateTime d) => '${d.day} ${_monthNames[d.month - 1]} ${d.year}';
+
+  String _annualFeeValue(String currencyCode, String symbol) {
+    if (!ReminderPlanner.hasAnnualFee(currentWallet.annualFee)) return 'Not set';
+    return CurrencyFormatter.formatStored(
+      currentWallet.annualFee,
+      currencyCode: currencyCode,
+      symbol: symbol,
+    );
+  }
+
+  String _annualFeeDueValue(AnnualFeeStatus status) {
+    final due = status.nextDue;
+    if (due == null) return 'Not set';
+    return status.overdue ? 'Overdue (due ${_formatDate(due)})' : _formatDate(due);
+  }
+
+  /// Marks the current annual fee as paid; the next reminders move to the
+  /// following year.
+  Future<void> _markAnnualFeePaid() async {
+    final status = ReminderPlanner.annualFeeStatus(currentWallet, DateTime.now());
+    final due = status.nextDue;
+    if (due == null) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Mark annual fee as paid?'),
+        content: Text('This marks the fee due on ${_formatDate(due)} as paid. '
+            'Reminders move to next year.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Mark as paid')),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    final paidYear = ReminderPlanner.paidYearAfterMarkingPaid(currentWallet, DateTime.now());
+    final updated = currentWallet.copyWithAnnualFee(annualFeePaidYear: paidYear);
+    final provider = context.read<WalletProvider>();
+    final messenger = ScaffoldMessenger.of(context);
+    await DatabaseHelper.instance.updateWallet(updated);
+    if (!mounted) return;
+    setState(() => currentWallet = updated);
+    await provider.fetchWallets(); // re-syncs reminders
+    final next = ReminderPlanner.annualFeeStatus(updated, DateTime.now()).nextDue;
+    messenger.showSnackBar(SnackBar(
+      content: Text(next == null
+          ? 'Annual fee marked as paid.'
+          : 'Annual fee marked as paid. Next due: ${_formatDate(next)}.'),
+    ));
   }
 
   Future<void> _openPdf(String pdfPath) async {
@@ -501,6 +560,36 @@ class _WalletDetailScreenState extends State<WalletDetailScreen> {
                 value: _getFeeWaiverStatus(currentWallet, currencyCode, symbol),
               ),
               _LiquidGlassDetailTile(
+                icon: Icons.payments_outlined,
+                title: 'Annual Fee',
+                value: _annualFeeValue(currencyCode, symbol),
+              ),
+              Builder(builder: (context) {
+                final status = ReminderPlanner.annualFeeStatus(
+                  currentWallet,
+                  DateTime.now(),
+                );
+                return Column(
+                  children: [
+                    _LiquidGlassDetailTile(
+                      icon: Icons.event_outlined,
+                      title: 'Annual Fee Due',
+                      value: _annualFeeDueValue(status),
+                      valueColor: status.overdue ? Colors.orange.shade400 : null,
+                    ),
+                    if (status.nextDue != null)
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: TextButton.icon(
+                          onPressed: _markAnnualFeePaid,
+                          icon: const Icon(Icons.check_circle_outline, size: 18),
+                          label: const Text('Mark as paid'),
+                        ),
+                      ),
+                  ],
+                );
+              }),
+              _LiquidGlassDetailTile(
                 icon: Icons.credit_card_outlined,
                 title: 'Card Type',
                 value: currentWallet.cardtype ?? 'N/A',
@@ -546,7 +635,9 @@ class WalletEditScreenState extends State<WalletEditScreen> {
       _billdateController,
       _categoryController,
       _annualFeeWaiverController,
-      _rewardsController;
+      _rewardsController,
+      _annualFeeController;
+  String? _annualFeeDueDay;
   late String _network;
   late String _selectedColor;
   final List<TextEditingController> _customFieldNameControllers = [];
@@ -576,6 +667,8 @@ class WalletEditScreenState extends State<WalletEditScreen> {
       text: wallet.annualFeeWaiver,
     );
     _rewardsController = TextEditingController(text: wallet.rewards);
+    _annualFeeController = TextEditingController(text: wallet.annualFee);
+    _annualFeeDueDay = wallet.annualFeeDueDay;
     _selectedColor = wallet.color ?? 'default';
 
     if (wallet.frontImagePath != null && wallet.frontImagePath!.isNotEmpty) {
@@ -624,6 +717,7 @@ class WalletEditScreenState extends State<WalletEditScreen> {
     _categoryController.dispose();
     _annualFeeWaiverController.dispose();
     _rewardsController.dispose();
+    _annualFeeController.dispose();
     for (var controller in _customFieldNameControllers) {
       controller.dispose();
     }
@@ -734,6 +828,16 @@ class WalletEditScreenState extends State<WalletEditScreen> {
         pdfName = null;
       }
 
+      // When the due date is set or changed, start counting from its next
+      // occurrence; otherwise keep the existing paid state.
+      final dueDay = _annualFeeDueDay;
+      var paidYear = widget.wallet.annualFeePaidYear;
+      if (dueDay != widget.wallet.annualFeeDueDay) {
+        paidYear = dueDay == null
+            ? null
+            : ReminderPlanner.initialPaidYear(dueDay, DateTime.now());
+      }
+
       final updatedWallet = Wallet(
         id: widget.wallet.id,
         name: _nameController.text,
@@ -754,6 +858,9 @@ class WalletEditScreenState extends State<WalletEditScreen> {
         backImagePath: backImagePath,
         pdfPath: pdfPath,
         pdfName: pdfName,
+        annualFee: _annualFeeController.text,
+        annualFeeDueDay: dueDay,
+        annualFeePaidYear: paidYear,
       );
       await DatabaseHelper.instance.updateWallet(updatedWallet);
 
@@ -969,6 +1076,16 @@ class WalletEditScreenState extends State<WalletEditScreen> {
                 ),
                 const SizedBox(height: 16),
                 _buildTextField(
+                  _annualFeeController,
+                  'Annual Fee ($symbol)',
+                  isDark,
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                ),
+                const SizedBox(height: 16),
+                _buildAnnualFeeDueDayPicker(isDark),
+                const SizedBox(height: 16),
+                _buildTextField(
                   _cardtypeController,
                   'Card Type (e.g., LTF, Paid)',
                   isDark,
@@ -1077,6 +1194,65 @@ class WalletEditScreenState extends State<WalletEditScreen> {
             vertical: 14,
           ),
         ),
+      ),
+    );
+  }
+
+  /// Picks the yearly annual fee due date (only month and day are kept).
+  Widget _buildAnnualFeeDueDayPicker(bool isDark) {
+    final textColor = isDark ? Colors.white : Colors.black;
+    const months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+    ];
+    final parsed = ReminderPlanner.parseDueDay(_annualFeeDueDay);
+    final label = parsed == null
+        ? 'Not set'
+        : 'Every year on ${parsed.day} ${months[parsed.month - 1]}';
+
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        color: isDark
+            ? Colors.white.withValues(alpha: 0.06)
+            : Colors.black.withValues(alpha: 0.03),
+        border: Border.all(
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.1)
+              : Colors.black.withValues(alpha: 0.08),
+        ),
+      ),
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+        title: Text(
+          'Annual Fee Due Date',
+          style: TextStyle(color: textColor.withValues(alpha: 0.5), fontSize: 13),
+        ),
+        subtitle: Text(label, style: TextStyle(color: textColor, fontSize: 16)),
+        trailing: parsed == null
+            ? Icon(Icons.event_outlined, color: textColor.withValues(alpha: 0.5))
+            : IconButton(
+                tooltip: 'Clear due date',
+                icon: Icon(Icons.clear, color: textColor.withValues(alpha: 0.6)),
+                onPressed: () => setState(() => _annualFeeDueDay = null),
+              ),
+        onTap: () async {
+          final now = DateTime.now();
+          final initial = parsed == null
+              ? now
+              : ReminderPlanner.nextOccurrence(parsed.month, parsed.day, now);
+          final picked = await showDatePicker(
+            context: context,
+            initialDate: initial,
+            firstDate: DateTime(now.year - 1),
+            lastDate: DateTime(now.year + 2, 12, 31),
+            helpText: 'Annual fee due date (repeats every year)',
+          );
+          if (picked != null) {
+            setState(() => _annualFeeDueDay =
+                ReminderPlanner.formatDueDay(picked.month, picked.day));
+          }
+        },
       ),
     );
   }

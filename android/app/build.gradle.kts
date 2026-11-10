@@ -59,6 +59,8 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+        // Required by flutter_local_notifications (card reminders).
+        isCoreLibraryDesugaringEnabled = true
     }
 
     dependenciesInfo {
@@ -154,6 +156,11 @@ tasks.configureEach {
     if (name == "preReleaseBuild" || name == "compileFlutterBuildRelease") {
         dependsOn(validateReleaseSigning)
     }
+}
+
+dependencies {
+    // Required by flutter_local_notifications (card reminders).
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
 }
 
 flutter {
