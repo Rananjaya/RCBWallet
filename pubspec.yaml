@@ -8,7 +8,7 @@ publish_to: "none"
 #   MAJOR = breaking changes, MINOR = backward-compatible features,
 #   PATCH = bug fixes, BUILD = Android versionCode (must increase on every
 #   distributed release). Upstream Wallet was at 1.0.42+45 when forked.
-version: 1.0.0+1
+version: 1.0.1+2
 
 environment:
   sdk: ^3.10.4
