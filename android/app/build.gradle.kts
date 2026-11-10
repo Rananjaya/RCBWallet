@@ -7,14 +7,50 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
-val keystoreProperties = Properties()
+// Release signing for RCBWallet.
+//
+// Credentials are read from android/key.properties, which is git-ignored and
+// must never be committed. See android/key.properties.example for the format.
+// The original upstream signing credentials are NOT used by this fork.
+//
+// Debug builds never need key.properties. Release builds REQUIRE a complete,
+// valid configuration and never fall back to the debug key: the
+// validateReleaseSigning task below fails the build with a clear message.
 val keystorePropertiesFile = rootProject.file("key.properties")
-if (keystorePropertiesFile.exists()) {
-    keystoreProperties.load(FileInputStream(keystorePropertiesFile))
+val keystoreProperties = Properties()
+val requiredSigningProperties = listOf("storeFile", "storePassword", "keyAlias", "keyPassword")
+val releaseSigningErrors = mutableListOf<String>()
+
+if (!keystorePropertiesFile.exists()) {
+    releaseSigningErrors += "android/key.properties was not found."
+} else {
+    FileInputStream(keystorePropertiesFile).use { keystoreProperties.load(it) }
+    val missing = requiredSigningProperties.filter {
+        keystoreProperties.getProperty(it).isNullOrBlank()
+    }
+    val placeholders = requiredSigningProperties.filter {
+        keystoreProperties.getProperty(it)?.trim() == "CHANGE_ME"
+    }
+    if (missing.isNotEmpty()) {
+        releaseSigningErrors += "android/key.properties is missing or has empty values for: " +
+            missing.joinToString(", ") + "."
+    }
+    if (placeholders.isNotEmpty()) {
+        releaseSigningErrors += "android/key.properties still contains placeholder values for: " +
+            placeholders.joinToString(", ") + "."
+    }
+    if (missing.isEmpty()) {
+        // storeFile is resolved relative to android/app/ (absolute paths also work).
+        val storeFile = file(keystoreProperties.getProperty("storeFile").trim())
+        if (!storeFile.isFile) {
+            releaseSigningErrors += "Release keystore not found at: ${storeFile.path}"
+        }
+    }
 }
+val releaseSigningReady = releaseSigningErrors.isEmpty()
 
 android {
-    namespace = "com.sidhant.wallet"
+    namespace = "com.rananjaya.rcbwallet"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -31,8 +67,7 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.sidhant.wallet"
+        applicationId = "com.rananjaya.rcbwallet"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
@@ -42,17 +77,20 @@ android {
     }
 
     signingConfigs {
-        create("release") {
-            keyAlias = keystoreProperties["keyAlias"] as String
-            keyPassword = keystoreProperties["keyPassword"] as String
-            storeFile = keystoreProperties["storeFile"]?.let { file(it) }
-            storePassword = keystoreProperties["storePassword"] as String
+        if (releaseSigningReady) {
+            create("release") {
+                keyAlias = keystoreProperties.getProperty("keyAlias").trim()
+                keyPassword = keystoreProperties.getProperty("keyPassword")
+                storeFile = file(keystoreProperties.getProperty("storeFile").trim())
+                storePassword = keystoreProperties.getProperty("storePassword")
+            }
         }
     }
 
     buildTypes {
         release {
-            signingConfig = signingConfigs.getByName("release")
+            // Only ever the dedicated release key. Never the debug key.
+            signingConfig = if (releaseSigningReady) signingConfigs.getByName("release") else null
         }
     }
 
@@ -78,6 +116,40 @@ android {
 kotlin {
     compilerOptions {
         jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
+    }
+}
+
+// Fails any release build (APK or App Bundle) early if release signing is
+// not fully configured. Debug builds do not run this task.
+val validateReleaseSigning = tasks.register("validateReleaseSigning") {
+    group = "verification"
+    description = "Checks that android/key.properties and the release keystore are valid."
+    val errors = releaseSigningErrors.toList()
+    doLast {
+        if (errors.isNotEmpty()) {
+            throw GradleException(
+                buildString {
+                    appendLine("RCBWallet release signing is not configured. Release builds are")
+                    appendLine("never signed with the debug key.")
+                    appendLine()
+                    errors.forEach { appendLine("  - $it") }
+                    appendLine()
+                    appendLine("To fix:")
+                    appendLine("  1. Create your own release/upload keystore (do not commit it).")
+                    appendLine("  2. Copy android/key.properties.example to android/key.properties.")
+                    appendLine("  3. Set storeFile, storePassword, keyAlias and keyPassword.")
+                    appendLine("     storeFile is relative to android/app/ or an absolute path.")
+                    appendLine()
+                    append("Debug builds (flutter build apk --debug) do not need key.properties.")
+                }
+            )
+        }
+    }
+}
+
+tasks.configureEach {
+    if (name == "preReleaseBuild" || name == "compileFlutterBuildRelease") {
+        dependsOn(validateReleaseSigning)
     }
 }
 

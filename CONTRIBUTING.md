@@ -1,4 +1,6 @@
-# Contributing to Wallet 💳
+# Contributing to RCBWallet 💳
+
+> RCBWallet is an independently maintained fork of [Wallet](https://github.com/sidhant947/Wallet) by Sidhant. These guidelines are adapted from the upstream project.
 
 First off, thank you for taking the time to contribute! It is contributors like you that make this a secure, community-driven tool for everyone.
 
@@ -9,7 +11,7 @@ As a local-first, privacy-focused application, we have specific standards to ens
 ## 🚀 How Can I Contribute?
 
 ### 1. Reporting Bugs
-* **Search First:** Check the [Issues](https://github.com/sidhant947/Wallet/issues) tab to see if the bug has already been reported.
+* **Search First:** Check the [Issues](https://github.com/Rananjaya/RCBWallet/issues) tab to see if the bug has already been reported.
 * **Be Specific:** Provide a clear title, steps to reproduce, and your environment details (Flutter version, OS, Device).
 * **Logs:** If the app crashed, provide the stack trace from your terminal.
 
@@ -30,8 +32,8 @@ As a local-first, privacy-focused application, we have specific standards to ens
 1.  **Prerequisites:** Ensure you have the [Flutter SDK](https://docs.flutter.dev/get-started/install) installed.
 2.  **Fork & Clone:**
     ```bash
-    git clone [https://github.com/sidhant947/Wallet.git](https://github.com/sidhant947/Wallet.git)
-    cd Wallet
+    git clone https://github.com/Rananjaya/RCBWallet.git
+    cd RCBWallet
     ```
 3.  **Install Dependencies:**
     ```bash

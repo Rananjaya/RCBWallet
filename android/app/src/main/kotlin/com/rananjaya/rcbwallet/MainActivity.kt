@@ -1,4 +1,4 @@
-package com.sidhant.wallet
+package com.rananjaya.rcbwallet
 
 import androidx.annotation.NonNull
 import io.flutter.embedding.android.FlutterFragmentActivity

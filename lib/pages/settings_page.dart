@@ -297,7 +297,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 subtitle: 'Found a bug? Let us know on GitHub.',
                 onTap: () async {
                   HapticFeedback.mediumImpact();
-                  const url = 'https://github.com/sidhant947/Wallet/issues';
+                  const url = 'https://github.com/Rananjaya/RCBWallet/issues';
                   await launchUrl(
                     Uri.parse(url),
                     mode: LaunchMode.externalApplication,

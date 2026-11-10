@@ -1,0 +1,13 @@
+# RCBWallet release signing template.
+#
+# Copy this file to android/key.properties and fill in your OWN values.
+# android/key.properties, *.jks and *.keystore are git-ignored.
+# NEVER commit the real key.properties or keystore file.
+#
+# storeFile is resolved relative to android/app/ (absolute paths also work).
+# Release builds fail while any value below is still CHANGE_ME.
+# Debug builds do not need this file.
+storeFile=upload-keystore.jks
+storePassword=CHANGE_ME
+keyAlias=CHANGE_ME
+keyPassword=CHANGE_ME
