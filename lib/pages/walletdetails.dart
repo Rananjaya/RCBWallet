@@ -16,6 +16,7 @@ import 'package:wallet/models/provider_helper.dart';
 import 'package:wallet/models/theme_provider.dart';
 import 'package:wallet/models/startup_settings_provider.dart';
 import 'package:wallet/services/card_utils.dart';
+import 'package:wallet/services/currency_formatter.dart';
 import 'package:wallet/widgets/full_screen_image_viewer.dart';
 import 'package:wallet/widgets/glass_credit_card.dart';
 import 'package:wallet/widgets/encrypted_image_display.dart';
@@ -93,26 +94,44 @@ class _WalletDetailScreenState extends State<WalletDetailScreen> {
     );
   }
 
-  String _formatCashback(String? spends, String? rewards, String symbol) {
+  String _formatCashback(
+    String? spends,
+    String? rewards,
+    String currencyCode,
+    String symbol,
+  ) {
     if (spends == null ||
         rewards == null ||
         spends.isEmpty ||
         rewards.isEmpty) {
-      return '${symbol}0.00';
+      return CurrencyFormatter.formatValue(
+        0,
+        currencyCode: currencyCode,
+        symbol: symbol,
+      );
     }
     double spendsVal = double.tryParse(spends) ?? 0;
     double rewardsVal = double.tryParse(rewards) ?? 0;
     double result = (spendsVal * rewardsVal) / 100;
-    return '$symbol${result.toStringAsFixed(2)}';
+    return CurrencyFormatter.formatValue(
+      result,
+      currencyCode: currencyCode,
+      symbol: symbol,
+    );
   }
 
-  String _getFeeWaiverStatus(Wallet wallet, String symbol) {
+  String _getFeeWaiverStatus(Wallet wallet, String currencyCode, String symbol) {
     double spends = double.tryParse(wallet.spends ?? '0') ?? 0;
     double waiverRequirement =
         double.tryParse(wallet.annualFeeWaiver ?? '0') ?? 0;
     if (waiverRequirement == 0) return "Not Applicable";
     if (spends >= waiverRequirement) return "Waived Off";
-    return "$symbol${(waiverRequirement - spends).toStringAsFixed(2)} more to waive";
+    final remaining = CurrencyFormatter.formatValue(
+      waiverRequirement - spends,
+      currencyCode: currencyCode,
+      symbol: symbol,
+    );
+    return "$remaining more to waive";
   }
 
   Future<void> _openPdf(String pdfPath) async {
@@ -218,6 +237,7 @@ class _WalletDetailScreenState extends State<WalletDetailScreen> {
     final startupProvider = Provider.of<StartupSettingsProvider>(context);
     final isDark = themeProvider.isDarkMode;
     final symbol = startupProvider.selectedCurrencySymbol;
+    final currencyCode = startupProvider.selectedCurrencyCode;
     bool isPathValid(String? path) => path != null && path.isNotEmpty;
 
     return Scaffold(
@@ -436,12 +456,22 @@ class _WalletDetailScreenState extends State<WalletDetailScreen> {
               _LiquidGlassDetailTile(
                 icon: Icons.credit_score_outlined,
                 title: 'Max Limit',
-                value: '$symbol${currentWallet.maxlimit ?? 'N/A'}',
+                value: CurrencyFormatter.formatStored(
+                  currentWallet.maxlimit,
+                  currencyCode: currencyCode,
+                  symbol: symbol,
+                  fallback: 'N/A',
+                ),
               ),
               _LiquidGlassDetailTile(
                 icon: Icons.receipt_long_outlined,
                 title: 'Annual Spends',
-                value: '$symbol${currentWallet.spends ?? '0.00'}',
+                value: CurrencyFormatter.formatStored(
+                  currentWallet.spends,
+                  currencyCode: currencyCode,
+                  symbol: symbol,
+                  fallback: '0.00',
+                ),
               ),
               _LiquidGlassDetailTile(
                 icon: Icons.card_giftcard_outlined,
@@ -449,6 +479,7 @@ class _WalletDetailScreenState extends State<WalletDetailScreen> {
                 value: _formatCashback(
                   currentWallet.spends,
                   currentWallet.rewards,
+                  currencyCode,
                   symbol,
                 ),
                 valueColor: Colors.green.shade400,
@@ -467,7 +498,7 @@ class _WalletDetailScreenState extends State<WalletDetailScreen> {
               _LiquidGlassDetailTile(
                 icon: Icons.verified_outlined,
                 title: 'Annual Fee Waiver',
-                value: _getFeeWaiverStatus(currentWallet, symbol),
+                value: _getFeeWaiverStatus(currentWallet, currencyCode, symbol),
               ),
               _LiquidGlassDetailTile(
                 icon: Icons.credit_card_outlined,
