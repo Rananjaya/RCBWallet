@@ -12,7 +12,7 @@ class PkpassService {
   Future<Pass?> parsePkpass(String filePath) async {
     try {
       final bytes = await File(filePath).readAsBytes();
-      return _parsePkpassFromBytes(bytes);
+      return await _parsePkpassFromBytes(bytes);
     } catch (_) {
       return null;
     }
