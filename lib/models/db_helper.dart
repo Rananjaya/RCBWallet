@@ -36,80 +36,107 @@ class DatabaseHelper {
     final path = join(directory.path, 'walletbox.db');
     return openDatabase(
       path,
-      version: 8,
-      onCreate: (db, version) async {
-        await db.execute('''
-          CREATE TABLE wallets(
-            id INTEGER PRIMARY KEY,
-            name TEXT,
-            number TEXT,
-            expiry TEXT,
-            network TEXT,
-            issuer TEXT,
-            customFields TEXT,
-            spends TEXT,
-            rewards TEXT,
-            annualFeeWaiver TEXT,
-            maxlimit TEXT,
-            cardtype TEXT,
-            billdate TEXT,
-            category TEXT,
-            color TEXT,
-            frontImagePath TEXT,
-            backImagePath TEXT,
-            pdfPath TEXT,
-            pdfName TEXT,
-            orderIndex INTEGER DEFAULT 0
-          )
-          ''');
-        await db.execute(
-          'CREATE INDEX idx_wallets_order ON wallets(orderIndex);',
-        );
-      },
-      onUpgrade: (db, oldVersion, newVersion) async {
-        if (oldVersion < 2) {
-          await db.execute('ALTER TABLE wallets ADD COLUMN spends TEXT;');
-          await db.execute('ALTER TABLE wallets ADD COLUMN rewards TEXT;');
-          await db.execute(
-            'ALTER TABLE wallets ADD COLUMN annualFeeWaiver TEXT;',
-          );
-          await db.execute('ALTER TABLE wallets ADD COLUMN maxlimit TEXT;');
-          await db.execute('ALTER TABLE wallets ADD COLUMN cardtype TEXT;');
-          await db.execute('ALTER TABLE wallets ADD COLUMN billdate TEXT;');
-          await db.execute('ALTER TABLE wallets ADD COLUMN category TEXT;');
-          await db.execute('ALTER TABLE wallets ADD COLUMN network TEXT;');
-        }
-        if (oldVersion < 3) {
-          await db.execute('ALTER TABLE wallets ADD COLUMN issuer TEXT;');
-          await db.execute('ALTER TABLE wallets ADD COLUMN customFields TEXT;');
-        }
-        if (oldVersion < 4) {
-          await db.execute('ALTER TABLE wallets ADD COLUMN color TEXT;');
-        }
-        if (oldVersion < 5) {
-          await db.execute(
-            'ALTER TABLE wallets ADD COLUMN frontImagePath TEXT;',
-          );
-          await db.execute(
-            'ALTER TABLE wallets ADD COLUMN backImagePath TEXT;',
-          );
-        }
-        if (oldVersion < 6) {
-          await db.execute(
-            'ALTER TABLE wallets ADD COLUMN orderIndex INTEGER DEFAULT 0;',
-          );
-        }
-        if (oldVersion < 7) {
-          await db.execute(
-            'CREATE INDEX idx_wallets_order ON wallets(orderIndex);',
-          );
-        }
-        if (oldVersion < 8) {
-          await db.execute('ALTER TABLE wallets ADD COLUMN pdfPath TEXT;');
-          await db.execute('ALTER TABLE wallets ADD COLUMN pdfName TEXT;');
-        }
-      },
+      version: walletsDbVersion,
+      onCreate: createWalletsTable,
+      onUpgrade: upgradeWalletsTable,
     );
+  }
+
+  /// Current schema version of walletbox.db.
+  static const int walletsDbVersion = 9;
+
+  /// Creates the wallets table at the current schema version.
+  static Future<void> createWalletsTable(Database db, int version) async {
+    await db.execute('''
+      CREATE TABLE wallets(
+        id INTEGER PRIMARY KEY,
+        name TEXT,
+        number TEXT,
+        expiry TEXT,
+        network TEXT,
+        issuer TEXT,
+        customFields TEXT,
+        spends TEXT,
+        rewards TEXT,
+        annualFeeWaiver TEXT,
+        maxlimit TEXT,
+        cardtype TEXT,
+        billdate TEXT,
+        category TEXT,
+        color TEXT,
+        frontImagePath TEXT,
+        backImagePath TEXT,
+        pdfPath TEXT,
+        pdfName TEXT,
+        orderIndex INTEGER DEFAULT 0,
+        annualFee TEXT,
+        annualFeeDueDay TEXT,
+        annualFeePaidYear TEXT
+      )
+      ''');
+    await db.execute(
+      'CREATE INDEX idx_wallets_order ON wallets(orderIndex);',
+    );
+  }
+
+  /// Upgrades the wallets table from [oldVersion]. Every step is additive, so
+  /// existing cards are kept unchanged.
+  static Future<void> upgradeWalletsTable(
+    Database db,
+    int oldVersion,
+    int newVersion,
+  ) async {
+    if (oldVersion < 2) {
+      await db.execute('ALTER TABLE wallets ADD COLUMN spends TEXT;');
+      await db.execute('ALTER TABLE wallets ADD COLUMN rewards TEXT;');
+      await db.execute(
+        'ALTER TABLE wallets ADD COLUMN annualFeeWaiver TEXT;',
+      );
+      await db.execute('ALTER TABLE wallets ADD COLUMN maxlimit TEXT;');
+      await db.execute('ALTER TABLE wallets ADD COLUMN cardtype TEXT;');
+      await db.execute('ALTER TABLE wallets ADD COLUMN billdate TEXT;');
+      await db.execute('ALTER TABLE wallets ADD COLUMN category TEXT;');
+      await db.execute('ALTER TABLE wallets ADD COLUMN network TEXT;');
+    }
+    if (oldVersion < 3) {
+      await db.execute('ALTER TABLE wallets ADD COLUMN issuer TEXT;');
+      await db.execute('ALTER TABLE wallets ADD COLUMN customFields TEXT;');
+    }
+    if (oldVersion < 4) {
+      await db.execute('ALTER TABLE wallets ADD COLUMN color TEXT;');
+    }
+    if (oldVersion < 5) {
+      await db.execute(
+        'ALTER TABLE wallets ADD COLUMN frontImagePath TEXT;',
+      );
+      await db.execute(
+        'ALTER TABLE wallets ADD COLUMN backImagePath TEXT;',
+      );
+    }
+    if (oldVersion < 6) {
+      await db.execute(
+        'ALTER TABLE wallets ADD COLUMN orderIndex INTEGER DEFAULT 0;',
+      );
+    }
+    if (oldVersion < 7) {
+      await db.execute(
+        'CREATE INDEX idx_wallets_order ON wallets(orderIndex);',
+      );
+    }
+    if (oldVersion < 8) {
+      await db.execute('ALTER TABLE wallets ADD COLUMN pdfPath TEXT;');
+      await db.execute('ALTER TABLE wallets ADD COLUMN pdfName TEXT;');
+    }
+    if (oldVersion < 9) {
+      // Annual fee reminders. Nullable, values encrypted like other fields.
+      await db.execute('ALTER TABLE wallets ADD COLUMN annualFee TEXT;');
+      await db.execute(
+        'ALTER TABLE wallets ADD COLUMN annualFeeDueDay TEXT;',
+      );
+      await db.execute(
+        'ALTER TABLE wallets ADD COLUMN annualFeePaidYear TEXT;',
+      );
+    }
   }
 
   Future<void> updateWalletsOrder(List<Wallet> wallets) async {

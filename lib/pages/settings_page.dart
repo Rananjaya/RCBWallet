@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:wallet/models/app_lock_provider.dart';
+import 'package:wallet/models/reminder_settings_provider.dart';
 import 'package:wallet/models/theme_provider.dart';
 import 'package:wallet/models/startup_settings_provider.dart';
 import 'package:wallet/services/app_lock_service.dart';
@@ -145,6 +146,7 @@ class _SettingsPageState extends State<SettingsPage> {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final startupProvider = Provider.of<StartupSettingsProvider>(context);
     final autoBackupProvider = Provider.of<AutoBackupProvider>(context);
+    final reminderProvider = Provider.of<ReminderSettingsProvider>(context);
     final isDark = themeProvider.isDarkMode;
 
     return Scaffold(
@@ -258,6 +260,58 @@ class _SettingsPageState extends State<SettingsPage> {
                   value: themeProvider.useSystemFont,
                   onChanged: (_) => themeProvider.toggleFont(),
                 ),
+              ),
+            ],
+          ),
+
+          _LiquidGlassSection(
+            title: 'Reminders',
+            icon: Icons.notifications_none_rounded,
+            children: [
+              _LiquidGlassTile(
+                icon: Icons.event_busy_outlined,
+                title: 'Card Expiry Reminders',
+                subtitle: '30 days, 7 days and on the expiry date',
+                trailing: Switch(
+                  value: reminderProvider.expiryEnabled,
+                  onChanged: (value) => reminderProvider.setExpiryEnabled(value),
+                ),
+              ),
+              Divider(
+                color: isDark
+                    ? const Color(0xFF2A2A2A)
+                    : const Color(0xFFE8E8E8),
+                height: 1,
+              ),
+              _LiquidGlassTile(
+                icon: Icons.receipt_long_outlined,
+                title: 'Annual Fee Reminders',
+                subtitle: '30 and 7 days before the due date',
+                trailing: Switch(
+                  value: reminderProvider.annualFeeEnabled,
+                  onChanged: (value) =>
+                      reminderProvider.setAnnualFeeEnabled(value),
+                ),
+              ),
+              Divider(
+                color: isDark
+                    ? const Color(0xFF2A2A2A)
+                    : const Color(0xFFE8E8E8),
+                height: 1,
+              ),
+              _LiquidGlassTile(
+                icon: Icons.schedule_outlined,
+                title: 'Reminder Time',
+                subtitle: reminderProvider.reminderTime.format(context),
+                onTap: () async {
+                  final picked = await showTimePicker(
+                    context: context,
+                    initialTime: reminderProvider.reminderTime,
+                  );
+                  if (picked != null) {
+                    await reminderProvider.setReminderTime(picked);
+                  }
+                },
               ),
             ],
           ),

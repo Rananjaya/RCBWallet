@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:wallet/models/app_lock_provider.dart';
+import 'package:wallet/models/reminder_settings_provider.dart';
 import 'package:wallet/models/theme_provider.dart';
 import 'package:wallet/models/startup_settings_provider.dart';
 import 'package:wallet/services/app_initialization_service.dart';
@@ -18,11 +19,13 @@ void main() async {
   final themeProvider = ThemeProvider();
   final startupProvider = StartupSettingsProvider();
   final autoBackupProvider = AutoBackupProvider();
+  final reminderSettingsProvider = ReminderSettingsProvider();
 
   await Future.wait([
     themeProvider.init(),
     startupProvider.loadStartupSettings(),
     autoBackupProvider.init(),
+    reminderSettingsProvider.init(),
     AppInitializationService.initializeApp(),
   ]);
 
@@ -41,6 +44,7 @@ void main() async {
         ChangeNotifierProvider.value(value: startupProvider),
         ChangeNotifierProvider.value(value: autoBackupProvider),
         ChangeNotifierProvider.value(value: appLockProvider),
+        ChangeNotifierProvider.value(value: reminderSettingsProvider),
       ],
       child: const MyApp(),
     ),

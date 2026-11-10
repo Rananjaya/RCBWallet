@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:wallet/models/db_helper.dart';
 import 'package:wallet/services/auto_backup_service.dart';
+import 'package:wallet/services/reminder_service.dart';
 
 class WalletProvider with ChangeNotifier {
   List<Wallet> wallets = [];
@@ -8,6 +10,9 @@ class WalletProvider with ChangeNotifier {
   Future<void> fetchWallets() async {
     wallets = await DatabaseHelper.instance.getWalletsSummary();
     notifyListeners();
+    // Every add, edit, import, restore and delete-all ends here, so keep the
+    // expiry and annual fee reminders in line with the stored cards.
+    unawaited(ReminderService.instance.sync());
   }
 
   Future<Wallet?> getWalletDetails(int id) async {
@@ -19,6 +24,8 @@ class WalletProvider with ChangeNotifier {
     wallets.removeWhere((w) => w.id == id);
     notifyListeners();
     AutoBackupService.triggerBackup();
+    // Cancels the deleted card's reminders.
+    unawaited(ReminderService.instance.sync());
   }
 
   Future<void> reorderWallets(int oldIndex, int newIndex) async {
