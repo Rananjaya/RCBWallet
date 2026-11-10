@@ -94,8 +94,6 @@ class _SettingsPageState extends State<SettingsPage> {
       body: ListView(
         padding: const EdgeInsets.all(16.0),
         children: [
-          _buildSponsorshipBanner(context, isDark),
-          const SizedBox(height: 16),
           _LiquidGlassSection(
             title: 'Startup & Layout',
             icon: Icons.rocket_launch_outlined,
@@ -882,52 +880,6 @@ class _SettingsPageState extends State<SettingsPage> {
         const SnackBar(content: Text('Delete failed. Please try again.')),
       );
     }
-  }
-
-  Widget _buildSponsorshipBanner(BuildContext context, bool isDark) {
-    return GestureDetector(
-      onTap: () async {
-        HapticFeedback.mediumImpact();
-        const url = 'https://ko-fi.com/sidhant947';
-        await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF1A1A1A) : const Color(0xFFF5F5F5),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFE8E8E8),
-            width: 0.5,
-          ),
-        ),
-        child: Row(
-          children: [
-            Icon(
-              Icons.coffee_outlined,
-              size: 20,
-              color: isDark ? Colors.white70 : Colors.black87,
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                'Buy Me a Coffee',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: isDark ? Colors.white : Colors.black,
-                ),
-              ),
-            ),
-            Icon(
-              Icons.arrow_forward_ios_rounded,
-              size: 14,
-              color: isDark ? Colors.white30 : Colors.black38,
-            ),
-          ],
-        ),
-      ),
-    );
   }
 }
 
