@@ -18,6 +18,7 @@ import 'package:wallet/widgets/barcode_card.dart';
 import 'package:wallet/models/provider_helper.dart';
 import 'package:wallet/services/clipboard_service.dart';
 import 'share_secure_screen.dart';
+import 'package:wallet/widgets/form_scroll_padding.dart';
 
 class BarcodeCardDetailScreen extends StatefulWidget {
   final Pass pass;
@@ -292,7 +293,7 @@ class _BarcodeCardDetailScreenState extends State<BarcodeCardDetailScreen> {
         ],
       ),
       body: ListView(
-        padding: const EdgeInsets.all(16.0),
+        padding: formScrollPadding(context),
         children: [
           BarcodeCard(
             pass: p,

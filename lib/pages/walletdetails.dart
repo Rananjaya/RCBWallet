@@ -22,6 +22,7 @@ import 'package:wallet/widgets/full_screen_image_viewer.dart';
 import 'package:wallet/widgets/glass_credit_card.dart';
 import 'package:wallet/widgets/encrypted_image_display.dart';
 import 'package:wallet/screens/share_secure_screen.dart';
+import 'package:wallet/widgets/form_scroll_padding.dart';
 
 // WalletDetailScreen with liquid glass design
 class WalletDetailScreen extends StatefulWidget {
@@ -392,7 +393,7 @@ class _WalletDetailScreenState extends State<WalletDetailScreen> {
         ],
       ),
       body: ListView(
-        padding: const EdgeInsets.all(16.0),
+        padding: formScrollPadding(context),
         children: [
           GlassCreditCard(
             isMasked: false,
@@ -922,7 +923,7 @@ class WalletEditScreenState extends State<WalletEditScreen> {
       body: Form(
         key: _formKey,
         child: ListView(
-          padding: const EdgeInsets.all(16.0),
+          padding: formScrollPadding(context),
           children: [
             GlassCreditCard(
               isMasked: false,

@@ -15,6 +15,7 @@ import 'package:wallet/widgets/full_screen_image_viewer.dart';
 import 'package:wallet/screens/homescreen.dart';
 import 'package:wallet/widgets/identity_card_entry_form.dart';
 import 'package:wallet/screens/share_secure_screen.dart';
+import 'package:wallet/widgets/form_scroll_padding.dart';
 
 class IdentityCardDetailScreen extends StatefulWidget {
   final IdentityCard card;
@@ -285,7 +286,7 @@ class _IdentityCardDetailScreenState extends State<IdentityCardDetailScreen> {
         ],
       ),
       body: ListView(
-        padding: const EdgeInsets.all(16.0),
+        padding: formScrollPadding(context),
         children: [
           IdentityCardWidget(
             card: currentCard,
