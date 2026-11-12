@@ -12,6 +12,7 @@ import 'package:wallet/widgets/barcode_card.dart';
 import 'package:wallet/widgets/color_picker.dart';
 import 'package:wallet/models/pass_types.dart';
 import 'package:wallet/services/google_wallet_service.dart';
+import 'package:wallet/widgets/form_scroll_padding.dart';
 
 class BarcodeCardEntryForm extends StatefulWidget {
   final Pass? existingPass;
@@ -839,7 +840,7 @@ class BarcodeCardEntryFormState extends State<BarcodeCardEntryForm> {
   Widget _buildManualEntryView() {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return ListView(
-      padding: const EdgeInsets.all(16.0),
+      padding: formScrollPadding(context),
       children: [
 
         BarcodeCard(

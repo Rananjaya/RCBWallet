@@ -13,6 +13,7 @@ import 'package:wallet/widgets/color_picker.dart';
 import 'package:wallet/widgets/form_section.dart';
 import 'package:wallet/widgets/glass_credit_card.dart';
 import 'package:wallet/widgets/image_picker_widget.dart';
+import 'package:wallet/widgets/form_scroll_padding.dart';
 
 class CreditCardEntryForm extends StatefulWidget {
   const CreditCardEntryForm({super.key});
@@ -200,7 +201,7 @@ class _CreditCardEntryFormState extends State<CreditCardEntryForm> {
     return Form(
       key: _formKey,
       child: ListView(
-        padding: const EdgeInsets.all(16.0),
+        padding: formScrollPadding(context),
         children: [
           GlassCreditCard(
             isMasked: false,

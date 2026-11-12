@@ -9,6 +9,7 @@ import 'package:wallet/services/image_service.dart';
 import 'package:wallet/services/auto_backup_service.dart';
 import 'package:wallet/widgets/identity_card_widget.dart';
 import 'package:wallet/widgets/color_picker.dart';
+import 'package:wallet/widgets/form_scroll_padding.dart';
 
 class IdentityCardEntryForm extends StatefulWidget {
   final IdentityCard? existingCard;
@@ -140,7 +141,7 @@ class IdentityCardEntryFormState extends State<IdentityCardEntryForm> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return ListView(
-      padding: const EdgeInsets.all(16.0),
+      padding: formScrollPadding(context),
       children: [
         // Preview
         IdentityCardWidget(
